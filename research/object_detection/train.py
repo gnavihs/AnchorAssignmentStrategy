@@ -80,6 +80,9 @@ flags.DEFINE_string('input_config_path', '',
 flags.DEFINE_string('model_config_path', '',
                     'Path to a model_pb2.DetectionModel config file.')
 
+flags.DEFINE_string("job_name", "", "Either 'ps' or 'worker'")
+flags.DEFINE_integer("task_index", 0, "Index of task within the job")
+
 FLAGS = flags.FLAGS
 
 
@@ -117,42 +120,54 @@ def main(_):
   create_input_dict_fn = functools.partial(
       input_reader_builder.build, input_config)
 
-  env = json.loads(os.environ.get('TF_CONFIG', '{}'))
-  cluster_data = env.get('cluster', None)
-  cluster = tf.train.ClusterSpec(cluster_data) if cluster_data else None
-  task_data = env.get('task', None) or {'type': 'master', 'index': 0}
-  task_info = type('TaskSpec', (object,), task_data)
+  # env = json.loads(os.environ.get('TF_CONFIG', '{}'))
+  # cluster_data = env.get('cluster', None)
+  # cluster = tf.train.ClusterSpec(cluster_data) if cluster_data else None
+  # task_data = env.get('task', None) or {'type': 'master', 'index': 0}
+  # task_info = type('TaskSpec', (object,), task_data)
 
-  # Parameters for a single worker.
-  ps_tasks = 0
-  worker_replicas = 1
-  worker_job_name = 'lonely_worker'
-  task = 0
-  is_chief = True
-  master = ''
+  # # Parameters for a single worker.
+  # ps_tasks = 0
+  # worker_replicas = 1
+  # worker_job_name = 'lonely_worker'
+  # task = 0
+  # is_chief = True
+  # master = ''
+
+  # cluster_data, my_job_name, my_task_index = tf_config_from_slurm(ps_number=1)
+
+  parameter_servers = [ "localhost:2232"]
+  workers           = [ "localhost:2233", "localhost:2234", "localhost:2235"]
+  cluster_data = {"ps":parameter_servers, "worker":workers}
 
   if cluster_data and 'worker' in cluster_data:
     # Number of total worker replicas include "worker"s and the "master".
-    worker_replicas = len(cluster_data['worker']) + 1
+    worker_replicas = len(cluster_data['worker'])
+    print("Number of replicas: ", worker_replicas)
   if cluster_data and 'ps' in cluster_data:
     ps_tasks = len(cluster_data['ps'])
+    print("Number of ps tasks: ", ps_tasks)
 
   if worker_replicas > 1 and ps_tasks < 1:
     raise ValueError('At least 1 ps task is needed for distributed training.')
 
   if worker_replicas >= 1 and ps_tasks > 0:
     # Set up distributed training.
-    server = tf.train.Server(tf.train.ClusterSpec(cluster), protocol='grpc',
-                             job_name=task_info.type,
-                             task_index=task_info.index)
-    if task_info.type == 'ps':
+    server = tf.train.Server(tf.train.ClusterSpec(cluster_data), protocol='grpc',
+                             job_name=FLAGS.job_name,
+                             task_index=FLAGS.task_index)
+    if FLAGS.job_name == 'ps':
       server.join()
       return
 
-    worker_job_name = '%s/task:%d' % (task_info.type, task_info.index)
-    task = task_info.index
-    is_chief = (task_info.type == 'master')
+    worker_job_name = '%s/task:%d' % (FLAGS.job_name, FLAGS.task_index)
+    task = FLAGS.task_index
+    is_chief = (FLAGS.task_index == 0)
     master = server.target
+    print("worker_job_name: ", worker_job_name)
+    print("task: ", task)
+    print("is_chief: ", is_chief)
+    print("master: ", master)
 
   trainer.train(create_input_dict_fn, model_fn, train_config, master, task,
                 FLAGS.num_clones, worker_replicas, FLAGS.clone_on_cpu, ps_tasks,

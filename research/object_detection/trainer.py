@@ -293,6 +293,7 @@ def train(create_tensor_dict_fn, create_model_fn, train_config, master, task,
     # Add summaries.
     for model_var in slim.get_model_variables():
       global_summaries.add(tf.summary.histogram(model_var.op.name, model_var))
+      break
     for loss_tensor in tf.losses.get_losses():
       global_summaries.add(tf.summary.scalar(loss_tensor.op.name, loss_tensor))
     global_summaries.add(
@@ -313,9 +314,9 @@ def train(create_tensor_dict_fn, create_model_fn, train_config, master, task,
 
     # Save checkpoints regularly.
     keep_checkpoint_every_n_hours = train_config.keep_checkpoint_every_n_hours
-    saver = tf.train.Saver(
+    saver = tf.train.Saver(max_to_keep=2,
         keep_checkpoint_every_n_hours=keep_checkpoint_every_n_hours)
-
+    print("YYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY")
     slim.learning.train(
         train_tensor,
         logdir=train_dir,
@@ -329,4 +330,5 @@ def train(create_tensor_dict_fn, create_model_fn, train_config, master, task,
             train_config.num_steps if train_config.num_steps else None),
         save_summaries_secs=120,
         sync_optimizer=sync_optimizer,
-        saver=saver)
+        saver=saver,
+        log_every_n_steps=1000)

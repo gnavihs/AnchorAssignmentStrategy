@@ -16,6 +16,7 @@
 import logging
 import os
 import time
+import codecs, json
 
 import numpy as np
 import tensorflow as tf
@@ -244,6 +245,10 @@ def _run_checkpoint_once(tensor_dict,
   if save_graph:
     tf.train.write_graph(sess.graph_def, save_graph_dir, 'eval.pbtxt')
 
+  valid_keys = ['source_id', 'detection_scores', 'detection_classes', 'detection_boxes']
+  print('CCCCCCCCCC', int(num_batches))
+  result_lists = {key: [] for key in valid_keys}
+  
   counters = {'skipped': 0, 'success': 0}
   with tf.contrib.slim.queues.QueueRunners(sess):
     try:
@@ -269,7 +274,54 @@ def _run_checkpoint_once(tensor_dict,
               image_id=batch, groundtruth_dict=result_dict)
           evaluator.add_single_detected_image_info(
               image_id=batch, detections_dict=result_dict)
-      logging.info('Running eval batches done.')
+        logging.info('Running eval batches done.')
+        for key in result_dict:
+          if key in valid_keys:
+            # if type(result_dict[key]) is bytes:
+            if key == 'source_id':
+              result_lists[key].append(int(result_dict["source_id"].decode("utf-8")))
+            
+            elif type(result_dict[key]) is np.ndarray:
+              x = result_dict[key]
+              if key == 'detection_scores':
+                x.round(3, out=x)
+              if key == 'detection_classes':
+                x = x.astype(int)
+              if key == 'detection_boxes':
+                x.round(2, out=x)
+              result_lists[key].append(x.tolist())
+
+      print("AAAAAAAAAAAA",len(result_lists["source_id"]))
+      resultMatrix = []
+      
+      for k, img_id in enumerate(result_lists["source_id"]):
+        rounded_detection_scores = [ round(elem, 3) for elem in result_lists['detection_scores'][k] ]
+        #Converting x2, y2 to width and height:
+        for bbox in result_lists['detection_boxes'][k]:
+          bbox[2] = bbox[2] - bbox[0]
+          bbox[3] = bbox[3] - bbox[1]
+          tmp = bbox[0]
+          bbox[0] = bbox[1]
+          bbox[1] = tmp
+          tmp = bbox[2]
+          bbox[2] = bbox[3]
+          bbox[3] = tmp
+        rounded_boxes_scores = [ [round(elem, 2) for elem in box] for box in result_lists['detection_boxes'][k] ]
+
+        for j in range(np.shape(result_lists['detection_scores'])[1]):
+          # if result_lists['detection_scores'][k][j] > 0.1:            
+          resultMatrix.append({ 'bbox': rounded_boxes_scores[j],
+                                'category_id': result_lists['detection_classes'][k][j]+1,
+                                'image_id': img_id,
+                                'score': rounded_detection_scores[j]
+                                })
+      print("Writing ouput json. Happy waiting!")
+      file_path = '/data/chercheurs/agarwals/coco/results/TOP1.json'
+      print("AAAAAAAAAAAA",len(resultMatrix))      
+      json.dump(resultMatrix, codecs.open(file_path, 'w', encoding='utf-8'), separators=(',', ':'), indent=4) ### this saves the array in .json format
+
+
+
     except tf.errors.OutOfRangeError:
       logging.info('Done evaluating -- epoch limit reached')
     finally:
@@ -457,6 +509,7 @@ def result_dict_for_single_example(image,
   output_dict = {
       input_data_fields.original_image: image,
       input_data_fields.key: key,
+      input_data_fields.source_id: key,
   }
 
   detection_fields = fields.DetectionResultFields

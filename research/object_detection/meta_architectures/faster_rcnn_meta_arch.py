@@ -339,9 +339,9 @@ class FasterRCNNMetaArch(model.DetectionModel):
     unmatched_cls_target = tf.constant(
         [1] + self._num_classes * [0], dtype=tf.float32)
     self._proposal_target_assigner = target_assigner.create_target_assigner(
-        'FasterRCNN', 'proposal')
+        'FasterRCNN', 'proposal51')
     self._detector_target_assigner = target_assigner.create_target_assigner(
-        'FasterRCNN', 'detection', unmatched_cls_target=unmatched_cls_target)
+        'FasterRCNN', 'detection51', unmatched_cls_target=unmatched_cls_target)
     # Both proposal and detector target assigners use the same box coder
     self._box_coder = self._proposal_target_assigner.box_coder
 

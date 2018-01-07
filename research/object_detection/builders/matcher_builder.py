@@ -17,6 +17,7 @@
 
 from object_detection.matchers import argmax_matcher
 from object_detection.matchers import bipartite_matcher
+from object_detection.matchers import top_k_anchor_matcher
 from object_detection.protos import matcher_pb2
 
 
@@ -48,4 +49,11 @@ def build(matcher_config):
         force_match_for_each_row=matcher.force_match_for_each_row)
   if matcher_config.WhichOneof('matcher_oneof') == 'bipartite_matcher':
     return bipartite_matcher.GreedyBipartiteMatcher()
+  if matcher_config.WhichOneof('matcher_oneof') == 'top_k_anchor_matcher':
+    matcher = matcher_config.top_k_anchor_matcher
+    number_of_top_k = matcher.number_of_top_k
+    unmatched_threshold = matcher.unmatched_threshold
+    return top_k_anchor_matcher.TopKAnchorMatcher(
+        number_of_top_k=number_of_top_k,
+        unmatched_threshold=unmatched_threshold)
   raise ValueError('Empty matcher.')

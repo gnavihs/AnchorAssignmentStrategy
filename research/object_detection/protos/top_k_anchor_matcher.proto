@@ -1,0 +1,11 @@
+syntax = "proto2";
+
+package object_detection.protos;
+
+// Configuration proto for top k anchor matcher. See
+// matchers/top_k_anchor_matcher.py for details.
+message TopKAnchorMatcher {
+  // Number of anchors to be assigned to each gt.
+  optional int32 number_of_top_k = 1 [default = 20];
+  optional float unmatched_threshold = 2 [default = 0.3];
+}

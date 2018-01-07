@@ -41,6 +41,7 @@ from object_detection.core import box_list_ops
 from object_detection.core import matcher as mat
 from object_detection.core import region_similarity_calculator as sim_calc
 from object_detection.matchers import argmax_matcher
+from object_detection.matchers import top_k_anchor_matcher
 from object_detection.matchers import bipartite_matcher
 
 
@@ -356,6 +357,7 @@ def create_target_assigner(reference, stage=None,
     box_coder = mean_stddev_box_coder.MeanStddevBoxCoder()
 
   elif reference == 'FasterRCNN' and stage == 'proposal':
+    print("GGGGGGGGGGGGGGGGGGGGGGGG")
     similarity_calc = sim_calc.IouSimilarity()
     matcher = argmax_matcher.ArgMaxMatcher(matched_threshold=0.7,
                                            unmatched_threshold=0.3,
@@ -364,10 +366,28 @@ def create_target_assigner(reference, stage=None,
         scale_factors=[10.0, 10.0, 5.0, 5.0])
 
   elif reference == 'FasterRCNN' and stage == 'detection':
+    print("gggggggggggggggggggggggg")
     similarity_calc = sim_calc.IouSimilarity()
     # Uses all proposals with IOU < 0.5 as candidate negatives.
     matcher = argmax_matcher.ArgMaxMatcher(matched_threshold=0.5,
                                            negatives_lower_than_unmatched=True)
+    box_coder = faster_rcnn_box_coder.FasterRcnnBoxCoder(
+        scale_factors=[10.0, 10.0, 5.0, 5.0])
+
+  elif reference == 'FasterRCNN' and stage == 'proposal51':
+    print("FFFFFFFFFFFFFFFFFFFFFFF")
+    similarity_calc = sim_calc.IouSimilarity()
+    matcher = top_k_anchor_matcher.TopKAnchorMatcher(number_of_top_k=5,
+                                           unmatched_threshold=0.3)
+    box_coder = faster_rcnn_box_coder.FasterRcnnBoxCoder(
+        scale_factors=[10.0, 10.0, 5.0, 5.0])
+
+  elif reference == 'FasterRCNN' and stage == 'detection51':
+    print("fffffffffffffffffffffffffff")
+    similarity_calc = sim_calc.IouSimilarity()
+    # Uses all proposals with IOU < 0.5 as candidate negatives.
+    matcher = top_k_anchor_matcher.TopKAnchorMatcher(number_of_top_k=1,
+                                           unmatched_threshold=0.5)
     box_coder = faster_rcnn_box_coder.FasterRcnnBoxCoder(
         scale_factors=[10.0, 10.0, 5.0, 5.0])
 
