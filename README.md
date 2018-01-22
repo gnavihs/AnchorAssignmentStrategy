@@ -1,11 +1,18 @@
 # TensorFlow Models
 
-This repository contains a number of different models implemented in [TensorFlow](https://www.tensorflow.org):
+Go to models/research/object_detection/
 
-The [official models](official) are a collection of example models that use TensorFlow's high-level APIs. They are intended to be well-maintained, tested, and kept up to date with the latest stable TensorFlow API. They should also be reasonably optimized for fast performance while still being easy to read. We especially recommend newer TensorFlow users to start here.
+I found out that for almost all small objects only one anchor is assigned in Faster Rcnn and SSD.
+This can be seen from files in IOU. (models/research/object_detection/IOU)
 
-The [research models](research) are a large collection of models implemented in TensorFlow by researchers. It is up to the individual researchers to maintain the models and/or provide support on issues and pull requests.
+To change this I changed the strategy of assigning anchors. Originally papers used IOU > 0.7. Instead of this I used top k anchors to assign to a ground truth.
 
-The [samples folder](samples) contains code snippets and smaller models that demonstrate features of TensorFlow, including code presented in various blog posts.
-
-The [tutorials folder](tutorials) is a collection of models described in the [TensorFlow tutorials](https://www.tensorflow.org/tutorials/).
+Check files (models/research/object_detection/):
+protos/top_k_anchor_matcher.proto
+anchor_generators/multiple_grid_anchor_generator.py
+builders/anchor_generator_builder.py
+builders/matcher_builder.py
+core/target_assigner.py
+meta_architectures/faster_rcnn_meta_arch.py
+protos/anchor_generator.proto
+protos/matcher.proto
